@@ -133,7 +133,7 @@ The web page shows an explicit undeployed/empty state until config contains a re
 
 Browser Native REST requests default to the same-origin `/qore-api` path because the upstream REST endpoint does not enable browser CORS. Both Vite `npm run dev` and `npm run preview` proxy that path to `https://api-testnet.qore.host`, stripping `/qore-api`. The dev server allows forwarded hostnames, including `*.devinapps.com`; use it only in a trusted development environment.
 
-Override the browser base with `VITE_QORE_API_BASE` in `web/.env.local` or the shell before starting Vite/building (for example, `VITE_QORE_API_BASE=/my-rest npm run build`). Vite embeds this public setting at build time; never put secrets in it. The built static files do **not** include a proxy: static hosts must rewrite `/qore-api/*` to `https://api-testnet.qore.host/*` server-side, or provide the equivalent rewrite for a custom base. An absolute base URL must itself support CORS. For local production-build checks, run `npm run build && npm run preview` from `web/`.
+Override the browser base with `VITE_QORE_API_BASE` in `web/.env.local` or the shell before starting Vite/building (for example, `VITE_QORE_API_BASE=/my-rest npm run build`). Vite embeds this public setting at build time; never put secrets in it. The built static files do **not** include a proxy: static hosts must rewrite `/qore-api/*` to `https://api-testnet.qore.host/*` server-side, or provide the equivalent rewrite for a custom base. An absolute base URL must itself support CORS. For local production-build checks, run `npm run build && npm run preview` from `web/`. On Vercel, deploy `web/` as the project root: `web/vercel.json` provides that rewrite.
 
 ## Account setup and deployment reference
 
