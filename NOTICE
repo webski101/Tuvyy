@@ -1,0 +1,17 @@
+Tuvyy
+Copyright (c) 2026 Chisom (webski101)
+
+Based on QoreChain's official Build Before Q-Day Workshop 3, 02-cross-vm:
+https://github.com/qorechain/build-before-qday/tree/main/workshop-3/02-cross-vm
+Reviewed upstream commit: 2af5c77999d5027ef41bb160bd4759da4a38a43a
+
+The upstream workshop is licensed under Apache License 2.0, reproduced in
+THIRD_PARTY_LICENSES/Apache-2.0.txt. scripts/account.ts adapts its window.ts
+account registration and signing workflow. contracts/TuvyyDAO.sol adapts the
+CrossVmCheckout Solidity bridge invocation/response handling pattern.
+
+Changes include DAO voting and membership, CW20/native treasury payouts,
+JSON escaping and receipt summaries, secret-file handling, deployment/demo
+automation and a separate React application. Original Tuvyy contributions
+are provided under the MIT license in LICENSE. Upstream portions retain
+their Apache-2.0 terms and attribution.

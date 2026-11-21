@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+keys/
+pqc-recovery-code
+.secrets/
+broadcast/
+node_modules/
+out/
+cache/
+dist/
