@@ -9,7 +9,13 @@ const proxy = {
   },
 };
 
+// Extra hostnames (beyond localhost) allowed to reach the dev/preview server, e.g. a forwarded preview domain.
+const allowedHosts = (process.env.TUVYY_ALLOWED_HOSTS ?? '.preview.devinapps.com')
+  .split(',')
+  .map((h) => h.trim())
+  .filter(Boolean);
+
 export default defineConfig({
-  server: { allowedHosts: true, proxy },
-  preview: { proxy },
+  server: { allowedHosts, proxy },
+  preview: { allowedHosts, proxy },
 });
