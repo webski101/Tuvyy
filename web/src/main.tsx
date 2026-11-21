@@ -25,6 +25,17 @@ const explorerAddress = (address: string) => `${explorer}/address/${address}`;
 const explorerBlock = (height: bigint | number) => `${explorer}/block/${height}`;
 const shorten = (value: string) => `${value.slice(0, 8)}…${value.slice(-6)}`;
 const errorText = (error: unknown) => error instanceof Error ? error.message.split('\n')[0] : 'Request failed';
+const disconnectKey = 'tuvyy.walletDisconnected';
+function disconnectedByUser() {
+  try { return localStorage.getItem(disconnectKey) === 'true'; }
+  catch { return false; }
+}
+function persistDisconnect(disconnected: boolean) {
+  try {
+    if (disconnected) localStorage.setItem(disconnectKey, 'true');
+    else localStorage.removeItem(disconnectKey);
+  } catch { /* Wallet state still works when storage is unavailable. */ }
+}
 
 async function readNative<T>(contract: string, query: unknown): Promise<T> {
   const encoded = encodeURIComponent(btoa(JSON.stringify(query)));
@@ -79,6 +90,10 @@ function validQor(value: string) {
 function App() {
   const [account, setAccount] = useState<Address>();
   const [chainId, setChainId] = useState<number>();
+  const [walletStatus, setWalletStatus] = useState('');
+  const walletDisconnected = useRef(disconnectedByUser());
+  const walletRequest = useRef(0);
+  const walletAccount = useRef<Address | undefined>(undefined);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [member, setMember] = useState(false);
@@ -128,10 +143,11 @@ function App() {
           }
           return { id, proposal, voted, execution, executionError };
         }));
+        if (account !== walletAccount.current) return;
         setEntries(rows); setCount(total); setQuorum(required); setBalance(treasury);
         setChainTime(block.timestamp); setMember(isMember);
       }
-    } catch (e) { setError(errorText(e)); }
+    } catch (e) { if (account === walletAccount.current) setError(errorText(e)); }
     finally { await native; setLoading(false); }
   }, [account, limit]);
 
@@ -168,22 +184,58 @@ function App() {
   useEffect(() => {
     const provider = window.ethereum;
     if (!provider) return;
-    const accountsChanged = (accounts: string[]) => { setAccount(accounts[0] as Address | undefined); setError(''); };
-    const chainChanged = (chain: string) => setChainId(Number(chain));
-    void provider.request({ method: 'eth_accounts' }).then(accountsChanged).catch(() => {});
-    void provider.request({ method: 'eth_chainId' }).then(chainChanged).catch(() => {});
+    let active = true;
+    const request = walletRequest.current;
+    const accountsChanged = (accounts: string[]) => {
+      if (walletDisconnected.current) return;
+      updateAccounts(accounts, Boolean(walletAccount.current));
+      setError('');
+    };
+    const chainChanged = (chain: string) => { if (!walletDisconnected.current) setChainId(Number(chain)); };
+    if (!walletDisconnected.current) {
+      void provider.request({ method: 'eth_accounts' }).then(accounts => { if (active && request === walletRequest.current && !walletDisconnected.current) updateAccounts(accounts); }).catch(() => {});
+      void provider.request({ method: 'eth_chainId' }).then(chain => { if (active && request === walletRequest.current) chainChanged(chain); }).catch(() => {});
+    }
     provider.on('accountsChanged', accountsChanged);
     provider.on('chainChanged', chainChanged);
-    return () => { provider.removeListener('accountsChanged', accountsChanged); provider.removeListener('chainChanged', chainChanged); };
+    return () => { active = false; provider.removeListener('accountsChanged', accountsChanged); provider.removeListener('chainChanged', chainChanged); };
   }, []);
 
+  function updateAccounts(accounts: readonly string[], announceEmpty = false) {
+    const next = accounts[0] as Address | undefined;
+    if (next !== walletAccount.current) {
+      setMember(false);
+      setEntries(rows => rows.map(row => ({ ...row, voted: false })));
+    }
+    walletAccount.current = next;
+    setAccount(next);
+    setWalletStatus(!accounts.length && announceEmpty ? 'Wallet returned no accounts — unlock it or choose an account.' : '');
+    if (!accounts.length) { setChainId(undefined); setMember(false); }
+  }
+
+  function disconnect() {
+    walletDisconnected.current = true;
+    walletRequest.current++;
+    persistDisconnect(true);
+    updateAccounts([]);
+    setError(''); setTransaction(''); setWalletStatus('Wallet disconnected.');
+    try {
+      void window.ethereum?.request({ method: 'wallet_revokePermissions', params: [{ eth_accounts: {} }] }).catch(() => {});
+    } catch { /* Revoking permissions is optional. */ }
+  }
+
   async function connect() {
-    setError('');
+    walletDisconnected.current = false;
+    persistDisconnect(false);
+    const request = ++walletRequest.current;
+    setError(''); setWalletStatus('');
     try {
       const provider = window.ethereum;
       if (!provider) throw new Error('Install an injected EVM wallet, such as QoreX or MetaMask.');
       const accounts = await provider.request({ method: 'eth_requestAccounts' });
-      setAccount(accounts[0]);
+      if (request !== walletRequest.current) return;
+      updateAccounts(accounts, true);
+      if (!accounts.length) return;
       try { await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x2648' }] }); }
       catch (e) {
         if ((e as { code?: number }).code !== 4902) throw e;
@@ -193,8 +245,9 @@ function App() {
         }] });
         await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x2648' }] });
       }
-      setChainId(Number(await provider.request({ method: 'eth_chainId' })));
-    } catch (e) { setError(errorText(e)); }
+      const chain = await provider.request({ method: 'eth_chainId' });
+      if (request === walletRequest.current) setChainId(Number(chain));
+    } catch (e) { if (request === walletRequest.current) setError(errorText(e)); }
   }
 
   async function transact(functionName: 'propose' | 'vote' | 'execute', args: readonly unknown[]) {
@@ -235,8 +288,9 @@ function App() {
   const createReason = actionReason('create', actionState);
   return <div className="shell">
     <header><a className="brand" href="#">tuvyy<span> / treasury, together</span></a>
-      <button className="connect" onClick={() => void connect()}>{account ? `${shorten(account)} · ${chainId === 9800 ? 'Diana' : 'Switch network'}` : 'Connect wallet ↗'}</button></header>
+      <div className="actions wallet-controls"><button className="connect" onClick={() => void connect()}>{account ? `${shorten(account)} · ${chainId === 9800 ? 'Diana' : 'Switch network'}` : 'Connect wallet ↗'}</button>{account && <button className="quiet" onClick={disconnect}>Disconnect</button>}</div></header>
     <main>
+      <div role="status" aria-live="polite">{walletStatus && <p className="notice">{walletStatus}</p>}</div>
       <section className="hero"><div><p className="eyebrow">QORECHAIN DIANA · CROSS-VM DAO</p><h1>A shared decision.<br/><em>One atomic outcome.</em></h1><p>Vote on EVM. Pay from the treasury. Leave a receipt on the Native lane — or roll it all back.</p></div>
         <div className="treasury"><span className="eyebrow">NATIVE TREASURY</span><strong>{dao ? Number(formatEther(balance)).toLocaleString(undefined, { maximumFractionDigits: 6 }) : '—'} <small>QOR</small></strong><span>{dao ? <a href={explorerAddress(dao)} target="_blank" rel="noreferrer" title={dao}>DAO {shorten(dao)} ↗</a> : 'Not deployed yet'}</span><span className="network">● Diana testnet · 9800</span></div></section>
       {!dao && <div className="notice">No DAO deployment configured. These are not demo proposals. Set the real address in <code>config/deployments.json</code> after deployment; live shared Native receipts remain readable below.</div>}
