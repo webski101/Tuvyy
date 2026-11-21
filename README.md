@@ -2,7 +2,7 @@
 
 **A shared decision. One atomic outcome.** A member-governed treasury for QoreChain's Build Before Q-Day Cross-VM track. Members propose and vote in Solidity; successful execution pays a grant and writes an immutable receipt to the existing CosmWasm receipt book.
 
-**Status: implemented and tested locally, NOT deployed.** `config/deployments.json` deliberately contains null DAO addresses. No testnet transaction has been sent by this project. This is a hackathon prototype, not an audited or production-ready treasury.
+**Status: live on Diana testnet.** Proposal #1 paid 2 QOR and wrote Native receipt #3; addresses and verification evidence are below and in `config/deployments.json`. This is a hackathon prototype, not an audited or production-ready treasury.
 
 ## Why cross-VM?
 
@@ -42,9 +42,14 @@ flowchart LR
 | REST | `https://api-testnet.qore.host` |
 | Explorer | https://explore.qore.network — select **Testnet** |
 | Faucet | https://dashboard.qorechain.io/faucet — authenticated, 100 QOR / 24 hours |
-| Tuvyy DAO EVM address | **Not deployed — null in config** |
-| Tuvyy DAO qor1 address | **Not deployed — null in config** |
-| Deployment / execution tx | **Not deployed / not executed** |
+| Tuvyy DAO EVM address | [`0xa2a86e88a90045de4fa5edf5dddca4b722cb9ef0`](https://explore.qore.network/address/0xa2a86e88a90045de4fa5edf5dddca4b722cb9ef0) |
+| Tuvyy DAO qor1 address | [`qor1525xaz9fqpzauna9ah6amh9yku3vh8hs72ag5s`](https://explore.qore.network/address/qor1525xaz9fqpzauna9ah6amh9yku3vh8hs72ag5s) |
+| Deployer / sole member / owner | `0x506E07d8Ad1445AeF16Aba109c47652290a64497` |
+| Deployer qor1 address | [`qor12phq0k9dz3z6aut2hggfc3m9y2g2v3yheaxg4y`](https://explore.qore.network/address/qor12phq0k9dz3z6aut2hggfc3m9y2g2v3yheaxg4y) |
+| Voting period / quorum | 60 seconds / 1 yes vote |
+| Deployment EVM tx | `0x7b76aa193451538bf6ab43d4082a5815a81bdeb6189df78daeaa992de4969383` — [block 10482962](https://explore.qore.network/block/10482962) |
+| Execution EVM tx | `0x869fa8e94edaa6d8111d2d87ead400c1f4dee36a5283375598034caa5426bb5e` — [block 10483018](https://explore.qore.network/block/10483018) |
+| Native receipt | ID **3**, proposal **1**, sender is the DAO's qor1 address |
 | Bridge | `0x0000000000000000000000000000000000000901` |
 | WDT CW20 | `qor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s93uuqt` |
 | qday-receipts | `qor1xjayq5ev55tkzpml9klxwyshr7gdrha0nurha9jhm0f0gdckksgs3gltw8` |
@@ -52,6 +57,32 @@ flowchart LR
 The deployment script uses the bridge and target defaults in this config, writes the real DAO address, its qor1 encoding and deployment transaction after confirmation. Rebuild the UI after updating config. It refuses to overwrite an existing DAO deployment silently.
 
 The DAO's qor1 identity is Bech32(prefix `qor`) of its **same 20 EVM-address bytes**. It is the sender the Native contracts see, not the wallet that called `execute`. Fund the DAO's qor1 identity with **WDT** for CW20 mode; fund its EVM address with **QOR** for native mode. WDT has 6 decimals; QOR uses 18-decimal EVM wei, versus 6-decimal bank `uqor` for native fees.
+
+### Verified live native demo
+
+Select **Testnet** in the explorer linked above. PQC registration and a hybrid-signed EVM window succeeded before deployment. The demo used `PAYOUT_KIND=NATIVE QOR_AMOUNT=2 npm run demo` from `scripts/`: fund DAO with 2 QOR, propose a payout back to the deployer, vote yes, wait 60 seconds, then execute. Proposal #1 is now executed with yes=1/no=0; the DAO balance returned to zero. The shared receipts count increased **2 → 3**.
+
+The recipient is also the executor, so its observed balance increase is the 2 QOR payout minus execution gas:
+
+| Measurement | QOR |
+|---|---:|
+| Recipient immediately before execution (after funding/propose/vote) | 17.455797025 |
+| Recipient after execution / remaining deployer balance | 19.3986635625 |
+| Net recipient increase | 1.9428665375 |
+| Execution gas cost (507853 gas × 112.5 gwei) | 0.0571334625 |
+
+Starting funding was 20 QOR. Registration/window each cost 0.1 QOR; total net setup/deployment/demo fees were 0.6013364375 QOR, leaving well above the 5 QOR reserve. Native bank REST reports `19398663 uqor` (the EVM balance retains sub-uqor precision). The window was bounded to 600 blocks, 8 transactions and 10000000 uqor of cumulative fee/value authorization; that limit is not an upfront fee and will expire.
+
+Exact Native receipt query (read-only):
+
+```sh
+QUERY=$(printf '%s' '{"receipt":{"id":3}}' | base64 | tr -d '\n')
+curl -s "https://api-testnet.qore.host/cosmwasm/wasm/v1/contract/qor1xjayq5ev55tkzpml9klxwyshr7gdrha0nurha9jhm0f0gdckksgs3gltw8/smart/$QUERY"
+```
+
+```json
+{"data":{"id":3,"sender":"qor1525xaz9fqpzauna9ah6amh9yku3vh8hs72ag5s","note":"Tuvyy #1: NATIVE 2000000000000000000; Demo grant","height":10483018}}
+```
 
 ### Important constraints
 
@@ -100,9 +131,9 @@ npx tsc --noEmit
 
 The web page shows an explicit undeployed/empty state until config contains a real DAO. It never substitutes fake proposals. The shared Native receipt book can still be queried. It displays the latest 20 shared receipts (not all belong to Tuvyy), supports older-proposal pagination and refreshes on-chain voting state every 12 seconds. Wallet transactions are simulated, signed and confirmed with viem; errors and pending hashes are shown. A wrong-chain wallet must switch to 9800. Setup/deployment screens are intentionally separate from ordinary voting UI.
 
-## Future deployment (do not run until funded)
+## Account setup and deployment reference
 
-The following commands **send transactions** except `init` / `status`. They were not run as part of this implementation. Defaults are a single deployer member, 60-second voting period, quorum 1, suitable for a testnet demonstration, not a production governance policy.
+The following commands **send transactions** except `init` / `status`. They were used for the live testnet run above; do not rerun them blindly against the existing deployment or regenerate its PQC recovery code. Defaults are a single deployer member, 60-second voting period, quorum 1, suitable for a testnet demonstration, not a production governance policy.
 
 ### 1. Keys and faucet
 
@@ -159,7 +190,7 @@ Default native demo sends 0.001 QOR into the DAO, proposes a payment back to the
 
 Foundry covers both exact JSON payout paths, receipt failure undoing native/CW20 payout, bridge payout failure, retry, double execution/voting, non-member actions, early execution, tie/no votes/quorum failure, late voting, insufficient/rejecting native recipient, reentrant recipient, empty notes, control/quote/backslash escaping, ASCII/Unicode truncation, membership changes, invalid inputs and an inactive bridge.
 
-The mock demonstrates EVM transaction rollback, not a substitute for validating Diana's cross-VM journal behavior with a funded deployment. No live deployment, hybrid registration, governance transaction or payout was attempted. The frontend is build/typechecked but visually unverified. The bridge/receipt book remain dependencies governed by QoreChain. Standard timestamp, external-call and packed-encoding linter warnings should be reviewed in context: voting uses time by design, execution is guarded, and packed encoding constructs JSON rather than a hashed authorization message.
+The mock demonstrates EVM transaction rollback. The live run verified PQC registration, window opening, deployment, voting, a native payout and a receipt whose sender is the DAO; it did not exercise a failing bridge transaction or a funded CW20 payout on Diana. Live cross-VM rollback under failure remains unverified. The frontend is build/typechecked but visually unverified. The bridge/receipt book remain dependencies governed by QoreChain. Standard timestamp, external-call and packed-encoding linter warnings should be reviewed in context: voting uses time by design, execution is guarded, and packed encoding constructs JSON rather than a hashed authorization message.
 
 ## Kits and credits
 

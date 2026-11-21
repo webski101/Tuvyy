@@ -1,9 +1,26 @@
 {
   "chainId": 9800,
-  "dao": null,
-  "deploymentTransaction": null,
-  "daoQor1": null,
+  "dao": "0xa2a86e88a90045de4fa5edf5dddca4b722cb9ef0",
+  "deploymentTransaction": "0x7b76aa193451538bf6ab43d4082a5815a81bdeb6189df78daeaa992de4969383",
+  "daoQor1": "qor1525xaz9fqpzauna9ah6amh9yku3vh8hs72ag5s",
   "bridge": "0x0000000000000000000000000000000000000901",
   "wdt": "qor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s93uuqt",
-  "receipts": "qor1xjayq5ev55tkzpml9klxwyshr7gdrha0nurha9jhm0f0gdckksgs3gltw8"
+  "receipts": "qor1xjayq5ev55tkzpml9klxwyshr7gdrha0nurha9jhm0f0gdckksgs3gltw8",
+  "deployer": "0x506E07d8Ad1445AeF16Aba109c47652290a64497",
+  "deployerQor1": "qor12phq0k9dz3z6aut2hggfc3m9y2g2v3yheaxg4y",
+  "votingPeriodSeconds": 60,
+  "quorum": 1,
+  "demo": {
+    "proposalId": 1,
+    "payoutKind": "NATIVE",
+    "amountWei": "2000000000000000000",
+    "recipient": "0x506E07d8Ad1445AeF16Aba109c47652290a64497",
+    "executionTransaction": "0x869fa8e94edaa6d8111d2d87ead400c1f4dee36a5283375598034caa5426bb5e",
+    "executionBlock": 10483018,
+    "receiptId": 3,
+    "receiptCountBefore": 2,
+    "receiptCountAfter": 3,
+    "recipientWeiBeforeExecution": "17455797025000000000",
+    "recipientWeiAfterExecution": "19398663562500000000"
+  }
 }
