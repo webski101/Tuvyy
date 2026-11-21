@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { getNetwork } from '@qorechain/sdk';
 import { bech32 } from '@scure/base';
 import {
   createPublicClient, createWalletClient, custom, formatEther, formatUnits, http,
@@ -12,7 +11,7 @@ import './style.css';
 
 declare global { interface Window { ethereum?: EIP1193Provider } }
 const client = createPublicClient({ chain: diana, transport: http() });
-const network = getNetwork('testnet');
+const nativeRestBase = (import.meta.env.VITE_QORE_API_BASE || '/qore-api').replace(/\/+$/, '');
 const dao = deployment.dao && isAddress(deployment.dao) ? deployment.dao as Address : undefined;
 type Proposal = {
   recipientQor1: string; recipientEvm: Address; amount: bigint; note: string;
@@ -25,7 +24,7 @@ const errorText = (error: unknown) => error instanceof Error ? error.message.spl
 
 async function readNative<T>(contract: string, query: unknown): Promise<T> {
   const encoded = encodeURIComponent(btoa(JSON.stringify(query)));
-  const response = await fetch(`${network.endpoints.rest}/cosmwasm/wasm/v1/contract/${contract}/smart/${encoded}`);
+  const response = await fetch(`${nativeRestBase}/cosmwasm/wasm/v1/contract/${contract}/smart/${encoded}`);
   if (!response.ok) throw new Error(`Native query failed (${response.status})`);
   return (await response.json() as { data: T }).data;
 }

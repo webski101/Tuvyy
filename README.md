@@ -131,6 +131,10 @@ npx tsc --noEmit
 
 The web page shows an explicit undeployed/empty state until config contains a real DAO. It never substitutes fake proposals. The shared Native receipt book can still be queried. It displays the latest 20 shared receipts (not all belong to Tuvyy), supports older-proposal pagination and refreshes on-chain voting state every 12 seconds. Wallet transactions are simulated, signed and confirmed with viem; errors and pending hashes are shown. A wrong-chain wallet must switch to 9800. Setup/deployment screens are intentionally separate from ordinary voting UI.
 
+Browser Native REST requests default to the same-origin `/qore-api` path because the upstream REST endpoint does not enable browser CORS. Both Vite `npm run dev` and `npm run preview` proxy that path to `https://api-testnet.qore.host`, stripping `/qore-api`. The dev server allows forwarded hostnames, including `*.devinapps.com`; use it only in a trusted development environment.
+
+Override the browser base with `VITE_QORE_API_BASE` in `web/.env.local` or the shell before starting Vite/building (for example, `VITE_QORE_API_BASE=/my-rest npm run build`). Vite embeds this public setting at build time; never put secrets in it. The built static files do **not** include a proxy: static hosts must rewrite `/qore-api/*` to `https://api-testnet.qore.host/*` server-side, or provide the equivalent rewrite for a custom base. An absolute base URL must itself support CORS. For local production-build checks, run `npm run build && npm run preview` from `web/`.
+
 ## Account setup and deployment reference
 
 The following commands **send transactions** except `init` / `status`. They were used for the live testnet run above; do not rerun them blindly against the existing deployment or regenerate its PQC recovery code. Defaults are a single deployer member, 60-second voting period, quorum 1, suitable for a testnet demonstration, not a production governance policy.
@@ -204,7 +208,7 @@ The workshop is **Apache-2.0**, not MIT. Its attribution and terms are retained 
 
 Actual dependency usage:
 
-* `@qorechain/sdk` — official network presets in scripts/UI; unified EVM/native accounts, ML-DSA signing and native message construction in account setup.
+* `@qorechain/sdk` — official network presets in scripts and the web REST proxy; unified EVM/native accounts, ML-DSA signing and native message construction in account setup.
 * `@qorechain/evm` — EVM authorization-window status and budget calculation.
 * `viem` — deployment, typed EVM reads, wallet writes/simulation, receipt/events and units.
 * Foundry — Solidity compilation and local rollback/security regression tests; React + Vite — user UI.
