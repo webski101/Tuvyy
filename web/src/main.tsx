@@ -7,6 +7,7 @@ import {
 } from 'viem';
 import { diana, daoAbi } from '../../config/chain';
 import deployment from '../../config/deployments.json';
+import { findEventInChunks } from './logs';
 import { actionReason, matchesReceipt, receiptId, receiptNote, type Receipt } from './presentation';
 import './style.css';
 
@@ -50,8 +51,10 @@ async function readExecution(id: bigint): Promise<Execution> {
   if (cached) return cached;
   if (!dao) throw new Error('No DAO configured');
   const start = deployment.deploymentTransaction ? (await client.getTransactionReceipt({ hash: deployment.deploymentTransaction as Hex })).blockNumber : 0n;
-  const logs = await client.getContractEvents({ address: dao, abi: daoAbi, eventName: 'Executed', args: { id }, fromBlock: start, toBlock: 'latest', strict: true });
-  const log = logs.find(event => !event.removed);
+  const latest = await client.getBlockNumber();
+  const log = await findEventInChunks(start, latest,
+    (fromBlock, toBlock) => client.getContractEvents({ address: dao, abi: daoAbi, eventName: 'Executed', args: { id }, fromBlock, toBlock, strict: true }),
+    event => !event.removed);
   if (!log) throw new Error('Executed event unavailable. Try Refresh.');
   const result: Execution = { hash: log.transactionHash, block: log.blockNumber };
   try {
