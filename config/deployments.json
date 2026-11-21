@@ -10,6 +10,7 @@
   "deployerQor1": "qor12phq0k9dz3z6aut2hggfc3m9y2g2v3yheaxg4y",
   "votingPeriodSeconds": 60,
   "quorum": 1,
+  "testProposalIds": [2],
   "demo": {
     "proposalId": 1,
     "payoutKind": "NATIVE",
