@@ -15,6 +15,7 @@ declare global { interface Window { ethereum?: EIP1193Provider } }
 const client = createPublicClient({ chain: diana, transport: http() });
 const nativeRestBase = (import.meta.env.VITE_QORE_API_BASE || '/qore-api').replace(/\/+$/, '');
 const dao = deployment.dao && isAddress(deployment.dao) ? deployment.dao as Address : undefined;
+const testProposalIds = new Set(deployment.testProposalIds.map(String));
 type Proposal = {
   recipientQor1: string; recipientEvm: Address; amount: bigint; note: string;
   payoutKind: number; deadline: bigint; yes: bigint; no: bigint; executed: boolean;
@@ -306,10 +307,12 @@ function App() {
           const open = chainTime < p.deadline;
           const passed = p.yes > p.no && p.yes >= quorum;
           const status = p.executed ? 'Executed' : open ? 'Voting open' : passed ? 'Ready to execute' : 'Not passed';
+          const isTest = testProposalIds.has(id.toString());
           const state = { ...actionState, executed: p.executed, open, voted, deadline: p.deadline, yes: p.yes, no: p.no, quorum };
           const voteReason = actionReason('vote', state);
           const executeReason = actionReason('execute', state);
-          return <article className="proposal" key={id.toString()}><div className="section-head"><span className="eyebrow">PROPOSAL #{id.toString()}</span><span className={`badge ${p.executed ? 'done' : ''}`}>{status}</span></div>
+          return <article className="proposal" key={id.toString()}><div className="section-head"><span className="eyebrow">PROPOSAL #{id.toString()}</span><div className="actions">{isTest && <span className="badge">Test</span>}<span className={`badge ${p.executed ? 'done' : ''}`}>{status}</span></div></div>
+            {isTest && <p className="muted">{open ? 'Test proposal' : 'Closed test proposal'} · retained as on-chain history.</p>}
             <h3>{formatUnits(p.amount, p.payoutKind === 0 ? 6 : 18)} {p.payoutKind === 0 ? 'WDT' : 'QOR'} <span>→ {shorten(p.payoutKind === 0 ? p.recipientQor1 : p.recipientEvm)}</span></h3><p className="note">{p.note || 'No note provided.'}</p>
             <p className="address">{p.payoutKind === 0 ? p.recipientQor1 : p.recipientEvm}</p>
             <div className="tally"><span>Yes <b>{p.yes.toString()}</b></span><span>No <b>{p.no.toString()}</b></span><span>Quorum <b>{quorum.toString()}</b></span></div>
