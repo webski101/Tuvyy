@@ -188,12 +188,12 @@ function App() {
     const request = walletRequest.current;
     const accountsChanged = (accounts: string[]) => {
       if (walletDisconnected.current) return;
-      updateAccounts(accounts);
+      updateAccounts(accounts, Boolean(walletAccount.current));
       setError('');
     };
     const chainChanged = (chain: string) => { if (!walletDisconnected.current) setChainId(Number(chain)); };
     if (!walletDisconnected.current) {
-      void provider.request({ method: 'eth_accounts' }).then(accounts => { if (active && request === walletRequest.current) accountsChanged(accounts); }).catch(() => {});
+      void provider.request({ method: 'eth_accounts' }).then(accounts => { if (active && request === walletRequest.current && !walletDisconnected.current) updateAccounts(accounts); }).catch(() => {});
       void provider.request({ method: 'eth_chainId' }).then(chain => { if (active && request === walletRequest.current) chainChanged(chain); }).catch(() => {});
     }
     provider.on('accountsChanged', accountsChanged);
@@ -201,7 +201,7 @@ function App() {
     return () => { active = false; provider.removeListener('accountsChanged', accountsChanged); provider.removeListener('chainChanged', chainChanged); };
   }, []);
 
-  function updateAccounts(accounts: readonly string[]) {
+  function updateAccounts(accounts: readonly string[], announceEmpty = false) {
     const next = accounts[0] as Address | undefined;
     if (next !== walletAccount.current) {
       setMember(false);
@@ -209,7 +209,7 @@ function App() {
     }
     walletAccount.current = next;
     setAccount(next);
-    setWalletStatus(accounts.length ? '' : 'Wallet returned no accounts — unlock it or choose an account.');
+    setWalletStatus(!accounts.length && announceEmpty ? 'Wallet returned no accounts — unlock it or choose an account.' : '');
     if (!accounts.length) { setChainId(undefined); setMember(false); }
   }
 
@@ -234,7 +234,7 @@ function App() {
       if (!provider) throw new Error('Install an injected EVM wallet, such as QoreX or MetaMask.');
       const accounts = await provider.request({ method: 'eth_requestAccounts' });
       if (request !== walletRequest.current) return;
-      updateAccounts(accounts);
+      updateAccounts(accounts, true);
       if (!accounts.length) return;
       try { await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x2648' }] }); }
       catch (e) {
