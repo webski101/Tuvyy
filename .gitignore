@@ -4,6 +4,8 @@
 *.key
 *.pem
 keys/
+pqc-recovery-code
+.secrets/
 broadcast/
 node_modules/
 out/

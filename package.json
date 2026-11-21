@@ -1,0 +1,9 @@
+{
+  "name": "tuvyy",
+  "private": true,
+  "workspaces": ["scripts", "web"],
+  "scripts": {
+    "build:web": "npm run build --workspace=tuvyy-web",
+    "typecheck:scripts": "npm run typecheck --workspace=tuvyy-scripts"
+  }
+}

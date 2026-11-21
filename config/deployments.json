@@ -1,0 +1,9 @@
+{
+  "chainId": 9800,
+  "dao": null,
+  "deploymentTransaction": null,
+  "daoQor1": null,
+  "bridge": "0x0000000000000000000000000000000000000901",
+  "wdt": "qor14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s93uuqt",
+  "receipts": "qor1xjayq5ev55tkzpml9klxwyshr7gdrha0nurha9jhm0f0gdckksgs3gltw8"
+}
