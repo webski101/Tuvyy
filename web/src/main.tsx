@@ -9,6 +9,7 @@ import { diana, daoAbi } from '../../config/chain';
 import deployment from '../../config/deployments.json';
 import { findEventInChunks } from './logs';
 import { actionReason, matchesReceipt, receiptId, receiptNote, type Receipt } from './presentation';
+import { chainSync } from './wallet';
 import './style.css';
 
 declare global { interface Window { ethereum?: EIP1193Provider } }
@@ -190,15 +191,18 @@ function App() {
     if (!provider) return;
     let active = true;
     const request = walletRequest.current;
+    const chain = chainSync(provider, setChainId, () => active && !walletDisconnected.current);
     const accountsChanged = (accounts: string[]) => {
       if (walletDisconnected.current) return;
       updateAccounts(accounts, Boolean(walletAccount.current));
       setError('');
+      // Unlocking a wallet may restore accounts without emitting chainChanged.
+      if (accounts.length) void chain.query();
     };
-    const chainChanged = (chain: string) => { if (!walletDisconnected.current) setChainId(Number(chain)); };
+    const chainChanged = (id: string) => chain.changed(id);
     if (!walletDisconnected.current) {
       void provider.request({ method: 'eth_accounts' }).then(accounts => { if (active && request === walletRequest.current && !walletDisconnected.current) updateAccounts(accounts); }).catch(() => {});
-      void provider.request({ method: 'eth_chainId' }).then(chain => { if (active && request === walletRequest.current) chainChanged(chain); }).catch(() => {});
+      void chain.query();
     }
     provider.on('accountsChanged', accountsChanged);
     provider.on('chainChanged', chainChanged);

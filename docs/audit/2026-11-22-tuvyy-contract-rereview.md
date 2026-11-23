@@ -10,6 +10,8 @@ Fresh static re-read and local test execution performed on 22 November 2026. Bas
 
 **Result:** 22 Foundry tests pass. No new critical/high contract issue was identified by this bounded review. This does not establish absence of vulnerabilities. Accepted design constraints and unverified cross-VM behavior are listed explicitly below; H-06 remains open.
 
+**Update, 23 November 2026:** H-06 was fixed after this review in [PR #5](https://github.com/webski101/Tuvyy/pull/5); see the dated note under H-06. The rest of this report is unchanged.
+
 ---
 
 ## 1. Method and threat model
@@ -86,6 +88,8 @@ Severity: **Informational trust boundary / unverified integration**. Status: **K
 Severity: **Low UI availability**. Status: **Open**, originally reported in PR #2 at [the review thread](https://github.com/webski101/Tuvyy/pull/2#discussion_r4651667571).
 
 Reproduced now in Chrome through a pre-mount mock EIP-1193 provider: connect on Diana, emit `accountsChanged([])`, restore the same account without `chainChanged`. The account returns but the UI displays "Switch network" and disables create; code's `canAct` also gates voting/execution on the missing chain ID. This confirms reachability for a provider that emits that sequence, not every real wallet. Clicking Connect/the account control re-queries chain ID. Left unchanged as an existing nontrivial wallet-lifecycle issue outside this documentation/favicon change. No new contract vulnerability was inferred from it.
+
+**Update, 23 November 2026:** Fixed after this review in [PR #5](https://github.com/webski101/Tuvyy/pull/5) (`7580f91`). When `accountsChanged` delivers a non-empty account list, the UI now re-queries `eth_chainId`; a reply is discarded if a newer `chainChanged` event or query superseded it, or if the user disconnected. `web/wallet.test.ts` covers the reported sequence, the wrong-network case and the stale/disconnect guards, and the sequence was re-run in headless Chrome with a mock provider: actions re-enable without reconnecting. Not exercised with a real wallet or live signing. The text above is left as written on the review date.
 
 ## 5. Deployment inventory from checked-in config
 

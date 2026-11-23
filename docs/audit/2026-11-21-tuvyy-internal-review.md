@@ -12,6 +12,8 @@ Scope: `contracts/TuvyyDAO.sol`, `test/TuvyyDAO.t.sol`, `web/`, deployment/accou
 
 **Overall status: several web findings fixed; one wallet-restoration finding remains open. Contract and cross-VM limitations remain.** This is a bounded internal review, not approval for production funds.
 
+**Update, 23 November 2026:** H-06 was fixed after this review in [PR #5](https://github.com/webski101/Tuvyy/pull/5); see the dated note under H-06. The rest of this report is unchanged.
+
 ---
 
 ## 1. Method and evidence boundaries
@@ -65,6 +67,8 @@ Explicit disconnect clears app wallet state, persists an opt-out, skips passive 
 Severity: **Low**, UI availability. Status: **Open**, reported in PR #2; no fix commit identified in main snapshot `d104f4a`.
 
 `updateAccounts([])` clears `chainId`; `accountsChanged([account])` restores only accounts and does not request the current chain. If unlocking emits no `chainChanged`, `canAct` stays false. Clicking the connected-account / Connect control re-queries the network as a workaround. The 22 November re-review reproduces this sequence with a mock provider. It is not a contract authorization bypass. Remediation should re-query chain ID on restored accounts with stale-response/disconnect guards and a regression test.
+
+**Update, 23 November 2026:** Fixed after this review in [PR #5](https://github.com/webski101/Tuvyy/pull/5) (`7580f91`). When `accountsChanged` delivers a non-empty account list, the UI now re-queries `eth_chainId`; a reply is discarded if a newer `chainChanged` event or query superseded it, or if the user disconnected. `web/wallet.test.ts` covers the reported sequence, the wrong-network case and the stale/disconnect guards, and the sequence was re-run in headless Chrome with a mock provider: actions re-enable without reconnecting. Not exercised with a real wallet or live signing. The text above is left as written on the review date.
 
 ### H-07: Leftover test proposal was indistinguishable from demo history
 
